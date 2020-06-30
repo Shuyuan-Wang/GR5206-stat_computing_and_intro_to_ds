@@ -1,0 +1,112 @@
+---
+title: "Lab 3"  
+author: "Shuyuan Wang, sw3449"
+date: "October 25, 2019"
+output: pdf_document
+---
+
+# Instructions 
+Make sure that you upload the PDF or HTML output after you have knitted the Rmd file.  The file you upload to the Canvas page should be updated with commands you provide to answer each of the questions below.  You can edit this file directly to produce your final solutions. The lab is due 11:59pm on Monday, October 28th.    
+
+# Optimization
+
+The goal of this lab is to write a simple optimization function in **R** which estimates the global minimum of a convex differentiable function $f(x)$.  Specifically, consider the function 
+$$f(x)=\frac{-\log(x)}{1+x}, \ \ x>0,$$
+where $\log(x)$ is the natural logarithm of $x$.  We seek to estimate the value of $x>0$ such that $f(x)$ achieves its global minimum.  For example, the global minimum of the function $g(x)=x^2-4x+3$ is at $x=2$. The minimum of $g(x)$ can easily be computed using the vertex formula for quadratic functions, i.e., $x=-b/(2a)=4/(2*1)=2$.  In most cases, the minimum does not have a closed form solution and must be computed numerically.  Hence we seek to estimate the global minimum of $f(x)$ numerically via gradient descent.    
+
+# Tasks
+
+1) Using **R**, define the function $$f(x)=\frac{-\log(x)}{1+x}, \ \ x>0.$$ Test the points $f(0)$ and $f(2)$.  
+
+```{r}
+f_x <- function(x){
+  return(-log(x)/(1+x))
+}
+f_x(0)
+f_x(2)
+```
+
+2) Plot the function $f(x)$ over the interval $(0,6]$. 
+
+```{r}
+curve(f_x,from=0,to=6,ylab='f(x)')
+```
+
+3)  By inspection, where do you think global minimum is located at?  
+
+I believe global minimum is located around 3.
+
+4) Define a **R** function which computes the difference quotient of $f(x)$, i.e., for $h>0$, 
+$$\frac{f(x+h)-f(x)}{h}.$$ This function should have two inputs; $h$ and $x$.  Name the difference quotient function **diff.quot**.  Note that for small $h$,  this function is the approximate derivative of $f(x)$.  
+
+```{r}
+diff.quot <- function(x,h=.0001){
+  return((f_x(x+h)-f_x(x))/h)
+}
+```
+
+5) Plot both the difference quotient function **diff.quot** and $f(x)$ over the interval $(0,6]$. Fix $h=.0001$ to construct this plot. Comment on any interesting features.
+
+```{r}
+curve(f_x,from=0.001,to=6,ylab='f(x)',ylim=c(-10,10))
+curve(diff.quot,from=0,to=6,add=T)
+```
+
+The 2 plots are kind of symmetric.
+
+6) Write a **R** function named **basic.grad.descent** that runs the basic gradient descent algorithm on the function $f(x)$.
+The function should have inputs:  
+
+\begin{enumerate}
+\item Initial value  {\bf x}
+\item Maximum iterations  {\bf max.iter} with default 10000. 
+\item Stopping criterion {\bf stop.deriv} with default 1e-10. 
+\item Derivative step size {\bf h} with default .0001.  
+\item Step size {\bf step.scale} with default .5. 
+\end{enumerate} The function should have outputs:
+\begin{enumerate}
+\item The value $x$ that yields the minimum of $f(x)$. 
+\item The minimum value of $f(x)$. 
+\item The number of iterations the algorithm took to reach the minimum.
+\item A logical indicator displaying whether or not the algorithm converged.  
+\end{enumerate}
+
+```{r}
+basic.grad.descent <- function(x,max.iter=10000,stop.deriv=1e-10,h=0.0001,step.scale=.5){
+  iter <- 0
+  deriv <- Inf
+  
+  for (i in 1:max.iter){
+    iter <- iter + 1
+    deriv <- diff.quot(x=x,h=h)
+    x <- x-step.scale*deriv
+    if (abs(deriv) < stop.deriv){
+      break()
+    }
+  }
+  fit <- list(x=x,min=f_x(x),iteration=iter,converged=(iter<max.iter))
+  return(fit)
+}
+
+basic.grad.descent(1)
+```
+
+7)  Check the optimal value using the base **R** function **nlm()**.  
+
+```{r}
+nlm(f_x,1)
+```
+
+# Hints
+
+I) The main idea of this algorithm is to update $x$ using the relation
+$$x_{i+1}=x_{i}-\text{step.scale}*f'(x_i),$$where $f'(x_i)$ is approximated by the difference quotient.     
+
+
+II) Build your function using the sample code from slide 50 in lecture notes **ISCDS_Set7**.  
+
+
+III) On slide 50, we were performing a least squares optimization procedure with objective function $SSE(\beta)$.  In this lab, the objective function is $f(x)$. 
+
+
+

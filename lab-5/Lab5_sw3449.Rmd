@@ -1,0 +1,236 @@
+---
+title: "Lab 5"
+author: "Shuyuan Wang, sw3449"
+date: "November 8, 2019"
+output: pdf_document
+---
+
+# Instructions 
+Make sure that you upload the PDF (or HTML) output after you have knitted the file. The files you upload to the Canvas page should be updated with commands you provide to answer each of the questions below.  You can edit this file directly to produce your final solutions.     
+
+# Goal
+
+The goal of this lab is to investigate the empirical behavior of a common hypothesis testing procedure through simulation using R. We consider the traditional two-sample t-test.  
+
+# Two-Sample T-Test
+
+
+Consider an experiment testing if a 35 year old male's heart rate statistically differs between a control group and a dosage group. Let $X$ denote the control group and let $Y$ denote the drug group.  One common method used to solve this problem is the two-sample t-test.  The null hypothesis for this study is:
+$$H_0:\mu_1-\mu_2=\Delta_0,$$
+where $\Delta_0$ is the hypothesized value.  The assumptions of the two sample pooled t-test follow below:  
+
+## Assumptions 
+
+\begin{enumerate}
+\item $X_1,X_2,\ldots, X_m$ is a random sample from a normal distribution with mean $\mu_1$ and variance $\sigma^2_1.$
+\item $Y_1,Y_2,\ldots, Y_n$ is a random sample from a normal distribution with mean $\mu_2$ and variance $\sigma^2_2.$
+\item The $X$ and $Y$ samples are independent of one another.   
+\end{enumerate}
+
+##  Procedure 
+
+The test statistic is 
+$$t_{calc}=\frac{\bar{x}-\bar{y}-\Delta_0}{\sqrt{\frac{s^2_1}{m}+\frac{s^2_2}{n}}},$$
+where $\bar{x},\bar{y}$ are the respective sample means and $s_1^2,s_2^2$ are the respective sample standard deviations. 
+
+The approximate degrees of freedom is  
+\[
+df=\frac{\Big{(}\frac{s^2_1}{m}+\frac{s_2^2}{n}\Big{)}^2}{\frac{(s_1^2/m)^2}{m-1}+\frac{(s_2^2/n)^2}{n-1}}
+\]
+Under the null hypothesis, $t_{calc}$ has a student's t-distribution with $df$ degrees of freedom.     
+
+##  Rejection rules 
+
+\begin{table}[ht]
+\begin{center}
+\begin{tabular}{c|c}
+Alternative Hypothesis   &  P-value calculation \\
+\hline
+&\\
+$H_A: \mu_1-\mu_2>\Delta_0$  \ \ (upper-tailed) & $P(t_{calc}>T)$ \\
+&\\
+\hline
+&\\
+$H_A:\mu_1-\mu_2<\Delta_0$ \ \ (lower-tailed) & $P(t_{calc}<T)$ \\
+&\\
+\hline
+&\\
+$H_A: \mu_1-\mu_2 \neq\Delta_0$ \ \ (two-tailed) & $2*P(|t_{calc}|>T)$ \\
+&\\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+Reject $H_0$ when: $$Pvalue\leq \alpha$$ 
+
+# Tasks
+
+1) Using the **R** function **t.test**, run the two sample t-test on the following simulated dataset.  Note that the **t.test** function defaults a two-tailed alternative.  Also briefly interpret the output.    
+```{r}
+set.seed(5)
+sigma=5
+Control <- rnorm(30,mean=10,sd=sigma)
+Dosage <- rnorm(35,mean=12,sd=sigma)
+t.test(Control,Dosage,mu=0,conf.level = 0.95)
+```
+Interpretation: Since p-value is slightly larger than 0.05, we fail to reject $H_0:\mu_1-\mu_2=\Delta_0$ at 5% siginificance level. It means we tend to believe that a 35 year old male’s heart rate does not statistically differ between a control group and a dosage group. 
+
+2)  Write a function called **t.test.sim** that simulates **R** different samples of $X$ for control and **R** different samples of $Y$ for the drug group and computes the proportion of test statistics that fall in the rejection region.  The function should include the following:  
+\begin{itemize}
+\item Inputs:
+\begin{itemize}
+\item {\bf R} is the number of simulated data sets (simulated test statistics).  Let  {\bf R} have default 10,000.  
+\item Parameters {\bf mu1}, {\bf mu2}, {\bf sigma1} and {\bf sigma2} which are the respective true means and true standard deviations of $X$ \& $Y$.  Let the parameters have respective defaults {\bf mu1=0}, {\bf mu2=0}, {\bf sigma1=1} and {\bf sigma2=1}.  
+\item Sample sizes {\bf n} and {\bf m} defaulted at {\bf m=n=30}.  
+\item \textbf{level} is the significance level as a decimal with default at $\alpha=.05$.  
+\item \textbf{value} is the hypothesized value defaulted at 0.  
+\end{itemize}
+\item The output should be a \textbf{list} with the following labeled elements: 
+\begin{itemize}  
+\item \textbf{statistic.list} vector of simulated t-statistics (this should have length {\bf R}).  
+\item \textbf{pvalue.list} vector of empirical p-values (this should have length {\bf R}).  
+\item \textbf{empirical.size} is a single number that represents the proportion of simulated test statistics that fell in the rejection region.    
+\end{itemize}
+\end{itemize}
+
+\pagebreak
+
+I started the function below: 
+```{r}
+t.test.sim <- function(R=10000,
+                           mu1=0,mu2=0,
+                           sigma1=1,sigma2=1,
+                           m=30,n=30,
+                           level=.05,
+                           value=0,
+                           direction="two.sided") {
+  
+  #Define empty lists
+  statistic.list <- rep(0,R)
+  pvalue.list <- rep(0,R)
+  
+  for (i in 1:R) {
+    
+    # Sample realized data 
+    Control <- rnorm(m,mean=mu1,sd=sigma1)
+    Dosage <- rnorm(n,mean=mu2,sd=sigma2)
+    
+    # Testing values
+    testing.procedure <- t.test(Control,Dosage,mu=value,
+                                conf.level = 1-level,alternative = direction)
+    statistic.list[i] <- testing.procedure$statistic
+    pvalue.list[i] <- testing.procedure$p.value
+    }
+  empirical.size <- mean(pvalue.list<level)
+  return(list(statistic.list=statistic.list,pvalue.list=pvalue.list,
+              empirical.size=empirical.size)) 
+  
+}
+```
+Evaluate your function with the following inputs 
+**R=10**,**mu1=10**,**mu2=12**,**sigma1=5** and **sigma2=5**. 
+```{r}
+t.test.sim(R=10,mu1=10,mu2=12,sigma1 = 5,sigma2=5)
+```
+
+
+
+3) Assuming the null hypothesis $$H_0:\mu_1-\mu_2=0$$ is true, compute the empirical size using 10,000 simulated data sets.  Use the function **t.test.sim** to accomplish this task and store the object as **sim**.  Output the empirical size quantity **sim$empirical.size**.  Comment on this value.  What is it close to?     
+
+  **Note:**  use **mu1=mu2=10** (i.e., the null is true).  Also set **sigma1=5**,**sigma2=5** and **n=m=30**. 
+```{r}
+sim <- t.test.sim(R=10000,mu1=10,mu2=10,sigma1=5,sigma2=5,n=30,m=30)
+sim$empirical.size
+```
+**sim$empirical.size** is close to significance level (probability of type I error, i.e. the probability of rejecting $H_0$ when $H_0$ is true).
+
+4) Plot a histogram of the simulated P-values, i.e., **hist(sim$pvalue.list)**.  What is the probability distribution shown from this histogram?  Does this surprise you?   
+```{r}
+hist(sim$pvalue.list,freq = F)
+```
+
+It seems like a Uniform distribution. Yes, it does surprise me.
+
+5) Plot a histogram illustrating the empirical sampling sampling of the t-statistic, i.e., **hist(sim$statistic.list,probability =TRUE)**.  What is the probability distribution shown from this histogram?    
+```{r}
+hist(sim$statistic.list,probability=TRUE)
+```
+
+It's a bell shaped distribution, likely a t-distribution.
+
+6) Run the following four lines of code:
+```{r}
+t.test.sim(R=1000,mu1=10,mu2=10,sigma1=5,sigma2=5)$empirical.size
+
+t.test.sim(R=1000,mu1=10,mu2=12,sigma1=5,sigma2=5)$empirical.size
+
+t.test.sim(R=1000,mu1=10,mu2=14,sigma1=5,sigma2=5)$empirical.size
+
+t.test.sim(R=1000,mu1=10,mu2=16,sigma1=5,sigma2=5)$empirical.size
+```      
+      Comment on the results.  
+Holding other parameters still, as the true difference between the two groups enlarges, the proportion of rejection increases. That is to say, the larger the true difference, the easier to detect the difference and the easier to reject $H_0$ (i.e. the larger power of the test).
+
+7) Run the following four lines of code:
+```{r}
+t.test.sim(R=10000,mu1=10,mu2=12,sigma1=10,sigma2=10,m=10,n=10)$empirical.size
+
+t.test.sim(R=10000,mu1=10,mu2=12,sigma1=10,sigma2=10,m=30,n=30)$empirical.size
+
+t.test.sim(R=10000,mu1=10,mu2=12,sigma1=10,sigma2=10,m=50,n=50)$empirical.size
+
+t.test.sim(R=10000,mu1=10,mu2=12,sigma1=10,sigma2=10,m=100,n=100)$empirical.size
+```      
+      Comment on the results.  
+Holding other parameters still and under $H_1$, as the sample sizes of the two groups both become larger, the proportion of rejection increases. That is to say, the larger the sample sizes, the easier to detect the difference and the easier to reject $H_0$ (i.e. the larger power of the test).
+
+
+8) **Extra credit:**  Modify the **t.test.sim()** function  to investigate how the power and size behave in the presence of heavy tailed data.  I.e., test how **robust** the t-test is in the presence of violations from normality.  **Hint:** the Cauchy distribution very heavy tailed.  
+```{r}
+t.test.sim2 <- function(R=10000,
+                           location1=0,location2=0,
+                           scale1=1,scale2=1,
+                           m=30,n=30,
+                           level=.05,
+                           value=0,
+                           direction="two.sided") {
+  
+  #Define empty lists
+  statistic.list <- rep(0,R)
+  pvalue.list <- rep(0,R)
+  
+  for (i in 1:R) {
+    
+    # Sample realized data 
+    Control <- rcauchy(m,location=location1,scale=scale1)
+    Dosage <- rcauchy(n,location=location2,scale=scale2)
+    
+    # Testing values
+    testing.procedure <- t.test(Control,Dosage,mu=value,
+                                conf.level = 1-level,alternative = direction)
+    statistic.list[i] <- testing.procedure$statistic
+    pvalue.list[i] <- testing.procedure$p.value
+    }
+  empirical.size <- mean(pvalue.list<level)
+  return(list(statistic.list=statistic.list,pvalue.list=pvalue.list,
+              empirical.size=empirical.size)) 
+  
+}
+```
+
+
+```{r}
+# how power and size behave in the presence of heavy tailed data
+t.test.sim2(R=10000,location1=0,location2=2,scale1=1,scale2=1,m=10,n=10)$empirical.size
+
+t.test.sim2(R=10000,location1=0,location2=2,scale1=1,scale2=1,m=30,n=30)$empirical.size
+
+t.test.sim2(R=10000,location1=0,location2=2,scale1=1,scale2=1,m=50,n=50)$empirical.size
+
+t.test.sim2(R=10000,location1=0,location2=2,scale1=1,scale2=1,m=100,n=100)$empirical.size
+```   
+
+In the presence of violations from normality, t-test behaves in the same manner that holding others still as the size increases, the power increases as well.
+
+
